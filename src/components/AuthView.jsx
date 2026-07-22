@@ -3,7 +3,7 @@ import { Mail, Lock, User, ArrowRight, Sparkles, Zap, Eye, EyeOff } from 'lucide
 import { supabase } from '../utils/supabaseClient';
 
 const AuthView = ({ onAuthSuccess }) => {
-  const [isLogin, setIsLogin] = useState(true);
+  const [authMode, setAuthMode] = useState('login'); // 'login' | 'register' | 'forgot_password'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -18,13 +18,22 @@ const AuthView = ({ onAuthSuccess }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email || !password || (!isLogin && !name)) {
-      showToast('Harap isikan seluruh data.', 'error');
+    if (!email) {
+      showToast('Harap isikan email.', 'error');
       return;
     }
+    if (authMode !== 'forgot_password' && !password) {
+      showToast('Harap isikan kata sandi.', 'error');
+      return;
+    }
+    if (authMode === 'register' && !name) {
+      showToast('Harap isikan nama penulis.', 'error');
+      return;
+    }
+
     setLoading(true);
     try {
-      if (isLogin) {
+      if (authMode === 'login') {
         const { data, error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
         onAuthSuccess({
@@ -33,14 +42,21 @@ const AuthView = ({ onAuthSuccess }) => {
           email: data.user.email,
           tokens: data.user.user_metadata?.tokens !== undefined ? data.user.user_metadata.tokens : 250
         });
-      } else {
+      } else if (authMode === 'register') {
         const { error } = await supabase.auth.signUp({
           email, password,
-          options: { data: { full_name: name, tokens: 250 } }
+          options: { data: { full_name: name, tokens: 250 }, emailRedirectTo: window.location.origin }
         });
         if (error) throw error;
-        showToast('🎉 Pendaftaran berhasil! Silakan login untuk memulai.', 'success');
-        setIsLogin(true);
+        showToast('🎉 Pendaftaran berhasil! Silakan cek email Anda.', 'success');
+        setAuthMode('login');
+      } else if (authMode === 'forgot_password') {
+        const { error } = await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin,
+        });
+        if (error) throw error;
+        showToast('✉️ Tautan reset sandi telah dikirim ke email Anda!', 'success');
+        setAuthMode('login');
       }
     } catch (err) {
       let errorMsg = err.message;
@@ -49,6 +65,26 @@ const AuthView = ({ onAuthSuccess }) => {
       else if (errorMsg === 'User already registered') errorMsg = 'Email ini sudah terdaftar.';
       
       showToast('❌ ' + errorMsg, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleMagicLink = async () => {
+    if (!email) {
+      showToast('Harap isikan email untuk Magic Link.', 'error');
+      return;
+    }
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({ 
+        email, 
+        options: { emailRedirectTo: window.location.origin } 
+      });
+      if (error) throw error;
+      showToast('🪄 Magic Link telah dikirim ke email Anda!', 'success');
+    } catch (err) {
+      showToast('❌ ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -114,15 +150,15 @@ const AuthView = ({ onAuthSuccess }) => {
             fontSize: '1.75rem', fontWeight: '900',
             color: 'var(--text-primary)', letterSpacing: '-0.5px', lineHeight: '1.2'
           }}>
-            {isLogin ? 'Selamat Datang' : 'Mulai Karir Anda'}
+            {authMode === 'login' ? 'Selamat Datang' : authMode === 'register' ? 'Mulai Karir Anda' : 'Lupa Kata Sandi'}
           </h1>
           <p style={{ color: 'var(--text-secondary)', marginTop: '0.5rem', fontSize: '0.9rem' }}>
-            {isLogin ? 'Masuk ke akun Kris AI Anda' : 'Buat akun untuk pabrikasi novel otomatis'}
+            {authMode === 'login' ? 'Masuk ke akun Kris AI Anda' : authMode === 'register' ? 'Buat akun untuk pabrikasi novel otomatis' : 'Masukkan email untuk mereset sandi Anda'}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-          {!isLogin && (
+          {authMode === 'register' && (
             <div>
               <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Nama Penulis</label>
               <div style={{ position: 'relative' }}>
@@ -150,32 +186,34 @@ const AuthView = ({ onAuthSuccess }) => {
             </div>
           </div>
 
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-              <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Kata Sandi</label>
-              {isLogin && (
-                <button type="button" style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>
-                  Lupa sandi?
+          {authMode !== 'forgot_password' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '700', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Kata Sandi</label>
+                {authMode === 'login' && (
+                  <button type="button" onClick={() => setAuthMode('forgot_password')} style={{ background: 'none', border: 'none', color: '#60a5fa', fontSize: '0.75rem', cursor: 'pointer', fontWeight: '600' }}>
+                    Lupa sandi?
+                  </button>
+                )}
+              </div>
+              <div style={{ position: 'relative' }}>
+                <Lock size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                <input
+                  type={showPass ? 'text' : 'password'}
+                  placeholder="Minimal 8 karakter" value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="form-input"
+                  style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)} style={{
+                  position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)',
+                  background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex'
+                }}>
+                  {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
-              )}
+              </div>
             </div>
-            <div style={{ position: 'relative' }}>
-              <Lock size={16} style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-              <input
-                type={showPass ? 'text' : 'password'}
-                placeholder="Minimal 8 karakter" value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="form-input"
-                style={{ paddingLeft: '2.75rem', paddingRight: '3rem' }}
-              />
-              <button type="button" onClick={() => setShowPass(!showPass)} style={{
-                position: 'absolute', right: '0.9rem', top: '50%', transform: 'translateY(-50%)',
-                background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', display: 'flex'
-              }}>
-                {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
-              </button>
-            </div>
-          </div>
+          )}
 
           {/* Submit */}
           <button
@@ -195,9 +233,28 @@ const AuthView = ({ onAuthSuccess }) => {
             {loading ? (
               <span className="spinner" style={{ border: '2px solid rgba(255,255,255,0.3)', borderTopColor: 'white', borderRadius: '50%', width: '18px', height: '18px', animation: 'spin 1s linear infinite', display: 'inline-block' }} />
             ) : (
-              <>{isLogin ? 'Masuk Sekarang' : 'Daftar Sekarang'} <ArrowRight size={18} /></>
+              <>{authMode === 'login' ? 'Masuk Sekarang' : authMode === 'register' ? 'Daftar Sekarang' : 'Kirim Tautan Reset'} <ArrowRight size={18} /></>
             )}
           </button>
+
+          {authMode === 'login' && (
+            <button
+              type="button" onClick={handleMagicLink} disabled={loading}
+              style={{
+                width: '100%', padding: '0.85rem',
+                background: 'rgba(168, 85, 247, 0.1)',
+                color: '#d946ef', fontWeight: '600',
+                border: '1px solid rgba(168, 85, 247, 0.3)', borderRadius: '0.875rem',
+                fontSize: '0.88rem', cursor: loading ? 'not-allowed' : 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+                transition: 'all 0.2s'
+              }}
+              onMouseOver={e => { e.currentTarget.style.background = 'rgba(168, 85, 247, 0.2)'; }}
+              onMouseOut={e => { e.currentTarget.style.background = 'rgba(168, 85, 247, 0.1)'; }}
+            >
+              <Sparkles size={15} /> Masuk dengan Magic Link
+            </button>
+          )}
 
           {/* Guest Login */}
           <button
@@ -220,14 +277,24 @@ const AuthView = ({ onAuthSuccess }) => {
         </form>
 
         {/* Toggle login/register */}
-        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-          {isLogin ? 'Belum punya akun?' : 'Sudah punya akun?'}{' '}
-          <button
-            onClick={() => setIsLogin(!isLogin)}
-            style={{ background: 'none', border: 'none', color: '#818cf8', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}
-          >
-            {isLogin ? 'Daftar Gratis' : 'Masuk ke Akun'}
-          </button>
+        <div style={{ marginTop: '1.5rem', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div>
+            {authMode === 'login' ? 'Belum punya akun?' : 'Sudah punya akun?'}{' '}
+            <button
+              onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')}
+              style={{ background: 'none', border: 'none', color: '#818cf8', fontWeight: '800', cursor: 'pointer', fontSize: '0.85rem' }}
+            >
+              {authMode === 'login' ? 'Daftar Gratis' : 'Masuk ke Akun'}
+            </button>
+          </div>
+          {authMode === 'forgot_password' && (
+            <button
+              onClick={() => setAuthMode('login')}
+              style={{ background: 'none', border: 'none', color: 'var(--text-secondary)', fontWeight: '600', cursor: 'pointer', fontSize: '0.8rem', textDecoration: 'underline' }}
+            >
+              Kembali ke Halaman Masuk
+            </button>
+          )}
         </div>
 
         {/* Footer */}

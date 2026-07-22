@@ -11,6 +11,8 @@ import EngineInterface from './components/EngineInterface';
 import AITerminalPreview from './components/AITerminalPreview';
 import AdminPanel from './components/AdminPanel';
 import AboutView from './components/AboutView';
+import ResetPasswordView from './components/ResetPasswordView';
+import SettingsView from './components/SettingsView';
 import {
   Book, Hash, Heart, Mic, MessageSquare, Sparkles, ChevronRight, Rocket, Trash2, Download as DownloadIcon,
   FileText, Mail, Quote, Flame, Briefcase, BookOpen, Share2, Globe, Video, Headphones, Languages, FileCode,
@@ -23,6 +25,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('beranda');
   const [view, setView] = useState('dashboard');
+  const [isRecoveringPassword, setIsRecoveringPassword] = useState(false);
   const [selectedEngine, setSelectedEngine] = useState(null);
   const [activeTool, setActiveTool] = useState(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -57,7 +60,19 @@ function App() {
       console.warn("Supabase session check skipped/failed:", err);
     });
 
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsRecoveringPassword(true);
+      }
+    });
+
     setSavedWorks(getSavedWorks());
+
+    return () => {
+      if (authListener?.subscription) {
+        authListener.subscription.unsubscribe();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -568,6 +583,7 @@ function App() {
 
     if (activeTab === 'admin') return <AdminPanel />;
     if (activeTab === 'about') return <AboutView />;
+    if (activeTab === 'settings') return <SettingsView user={user} onUpdate={(updates) => setUser({...user, ...updates})} />;
 
     if (activeTab === 'beranda') {
       if (view === 'dashboard') return renderDashboard();
@@ -579,6 +595,10 @@ function App() {
     if (activeTab === 'unduh') return renderUnduhView();
     return renderDashboard();
   };
+
+  if (isRecoveringPassword) {
+    return <ResetPasswordView onComplete={() => setIsRecoveringPassword(false)} />;
+  }
 
   if (!user) {
     return <AuthView onAuthSuccess={(userData) => {

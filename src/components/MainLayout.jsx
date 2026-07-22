@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Download, BookOpen, Wrench, Moon, Sun, Menu, X, Sparkles, User, Ghost, MessageSquare, LogOut, Shield, ChevronRight, Zap, Info } from 'lucide-react';
+import { Home, Download, BookOpen, Wrench, Moon, Sun, Menu, X, Sparkles, User, Ghost, MessageSquare, LogOut, Shield, ChevronRight, Zap, Info, Settings } from 'lucide-react';
 import ToolsDrawer from './ToolsDrawer';
 import GhostEditor from './GhostEditor';
 
@@ -25,6 +25,7 @@ const MainLayout = ({ children, activeTab, setActiveTab, onSelectTool, user, onL
   const ekosistem = [
     { id: 'folder', label: 'Riwayat Karya', icon: BookOpen },
     { id: 'admin', label: 'Kendali Token', icon: Shield },
+    { id: 'settings', label: 'Pengaturan Akun', icon: Settings },
     { id: 'about', label: 'Tentang App', icon: Info },
   ];
 
