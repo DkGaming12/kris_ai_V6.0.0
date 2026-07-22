@@ -48,14 +48,14 @@ const AuthView = ({ onAuthSuccess }) => {
           options: { data: { full_name: name, tokens: 250 }, emailRedirectTo: window.location.origin }
         });
         if (error) throw error;
-        showToast('🎉 Pendaftaran berhasil! Silakan cek email Anda.', 'success');
+        showToast('🎉 Pendaftaran berhasil! Cek email (juga folder Spam) Anda.', 'success');
         setAuthMode('login');
       } else if (authMode === 'forgot_password') {
         const { error } = await supabase.auth.resetPasswordForEmail(email, {
           redirectTo: window.location.origin,
         });
         if (error) throw error;
-        showToast('✉️ Tautan reset sandi telah dikirim ke email Anda!', 'success');
+        showToast('✉️ Tautan reset sandi telah dikirim! (Cek juga folder Spam)', 'success');
         setAuthMode('login');
       }
     } catch (err) {
@@ -84,7 +84,7 @@ const AuthView = ({ onAuthSuccess }) => {
         options: { emailRedirectTo: window.location.origin } 
       });
       if (error) throw error;
-      showToast('🪄 Magic Link telah dikirim ke email Anda!', 'success');
+      showToast('🪄 Magic Link terkirim! (Cek juga folder Spam di email Anda)', 'success');
     } catch (err) {
       showToast('❌ ' + err.message, 'error');
     } finally {
