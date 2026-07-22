@@ -64,6 +64,7 @@ const AuthView = ({ onAuthSuccess }) => {
       else if (errorMsg === 'Email not confirmed') errorMsg = 'Email belum dikonfirmasi. Silakan cek inbox/spam email Anda.';
       else if (errorMsg === 'User already registered') errorMsg = 'Email ini sudah terdaftar.';
       else if (errorMsg.includes('rate limit')) errorMsg = 'Terlalu banyak permintaan email. Silakan coba lagi nanti (limit Supabase tercapai).';
+      else if (errorMsg.includes('Error sending confirmation email')) errorMsg = 'Gagal mengirim email konfirmasi. (Cek pengaturan SMTP Supabase Anda).';
       
       showToast('❌ ' + errorMsg, 'error');
     } finally {
