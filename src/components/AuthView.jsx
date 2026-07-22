@@ -43,7 +43,12 @@ const AuthView = ({ onAuthSuccess }) => {
         setIsLogin(true);
       }
     } catch (err) {
-      showToast(err.message === 'Invalid login credentials' ? '❌ Email atau kata sandi salah' : '❌ ' + err.message, 'error');
+      let errorMsg = err.message;
+      if (errorMsg === 'Invalid login credentials') errorMsg = 'Email atau kata sandi salah.';
+      else if (errorMsg === 'Email not confirmed') errorMsg = 'Email belum dikonfirmasi. Silakan cek inbox/spam email Anda.';
+      else if (errorMsg === 'User already registered') errorMsg = 'Email ini sudah terdaftar.';
+      
+      showToast('❌ ' + errorMsg, 'error');
     } finally {
       setLoading(false);
     }
