@@ -9,11 +9,17 @@ const AuthView = ({ onAuthSuccess }) => {
   const [name, setName] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3500);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password || (!isLogin && !name)) {
-      alert('Harap isikan seluruh data.');
+      showToast('Harap isikan seluruh data.', 'error');
       return;
     }
     setLoading(true);
@@ -33,11 +39,11 @@ const AuthView = ({ onAuthSuccess }) => {
           options: { data: { full_name: name, tokens: 250 } }
         });
         if (error) throw error;
-        alert('Pendaftaran berhasil! Silakan cek email Anda untuk konfirmasi atau langsung coba login.');
+        showToast('🎉 Pendaftaran berhasil! Silakan login untuk memulai.', 'success');
         setIsLogin(true);
       }
     } catch (err) {
-      alert('Error: ' + err.message);
+      showToast(err.message === 'Invalid login credentials' ? '❌ Email atau kata sandi salah' : '❌ ' + err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -225,11 +231,31 @@ const AuthView = ({ onAuthSuccess }) => {
         </p>
       </div>
 
+      {/* Elegant Toast Notification */}
+      {toast && (
+        <div style={{
+          position: 'fixed', top: '24px', left: '50%', transform: 'translateX(-50%)',
+          background: toast.type === 'success' ? 'rgba(16, 185, 129, 0.95)' : 'rgba(239, 68, 68, 0.95)',
+          backdropFilter: 'blur(12px)', color: 'white', padding: '0.85rem 1.5rem',
+          borderRadius: '16px', fontWeight: '700', fontSize: '0.9rem',
+          zIndex: 9999, boxShadow: '0 8px 32px rgba(0,0,0,0.3)',
+          animation: 'toastDown 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
+          display: 'flex', alignItems: 'center', gap: '8px',
+          border: '1px solid rgba(255,255,255,0.2)'
+        }}>
+          {toast.message}
+        </div>
+      )}
+
       <style>{`
         @keyframes spin { 100% { transform: rotate(360deg); } }
         @keyframes float {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-20px); }
+        }
+        @keyframes toastDown {
+          0% { transform: translate(-50%, -100%); opacity: 0; }
+          100% { transform: translate(-50%, 0); opacity: 1; }
         }
       `}</style>
     </div>
